@@ -10,6 +10,7 @@
 </header>
 
 <main>
+<select id=selpref></select>
 <select id=selmonth></select>
 <div id=divtreemap></div>
 <div id=divtreemap2></div>
@@ -30,12 +31,22 @@ import { ArrayUtil } from "https://js.sabae.cc/ArrayUtil.js";
 import { Num } from "https://js.sabae.cc/Num.js";
 import { JAPAN_PREF, JAPAN_PREF_EN } from "https://js.sabae.cc/JAPAN_PREF.js";
 import { JAPAN_AREA, JAPAN_AREA_CODE } from "./JAPAN_AREA.js";
+import { removeHash } from "https://js.sabae.cc/removeHash.js";
 
 const urlc = "https://code4fukui.github.io/localgovjp/localgovjp-utf8.csv";
 const cities = await CSV.fetchJSON(urlc);
+cities.forEach(i => {
+  i.cid = parseInt(i.cid);
+  i.pid = parseInt(i.pid);
+});
 
 const url = "https://code4fukui.github.io/japan-kanko-stat/data/all.csv";
 const data = await CSV.fetchJSON(url);
+data.forEach(i => {
+  i.month = parseInt(i.month);
+  i.lgcode = parseInt(i.lgcode);
+  i.n = parseInt(i.n);
+});
 
 const showTreemap = (divtreemap, data, showtitle) => {
   const options = {
@@ -108,22 +119,33 @@ const showTreemap = (divtreemap, data, showtitle) => {
   chart.render();
 };
 
-const setOptions = (sel, array) => {
+const setOptions = (sel, array, functext) => {
   for (const i of array) {
     const opt = document.createElement("option");
-    opt.textContent = Math.floor(i / 100) + "年" + i % 100 + "月";
+    opt.textContent = functext ? functext(i) : i;
     opt.value = i;
     sel.appendChild(opt);
   }
 };
 
+setOptions(selpref, ["全国", ...JAPAN_PREF]);
+
 const months = ArrayUtil.toUnique(data.map(d => d.month));
-setOptions(selmonth, months);
+setOptions(selmonth, months, i => Math.floor(i / 100) + "年" + i % 100 + "月");
 selmonth.value = months[months.length - 1];
 
 const makeTreemapData = (data, flgpref) => {
+  const p = selpref.value;
+  const pcode = JAPAN_PREF.indexOf(p) + 1;
+  if (pcode != 0) {
+    flgpref = false;
+  }
   const m = selmonth.value;
-  const data2 = data.filter(i => i.month == m);
+  const data2 = data.filter(i => {
+    if (i.month != m) return false;
+    if (pcode == 0) return true;
+    return Math.floor(i.lgcode / 1000) == pcode;
+  });
 
   const res = [];
   for (const d of data2) {
@@ -140,28 +162,44 @@ const makeTreemapData = (data, flgpref) => {
 };
 
 // line chart
-
-const showLineChart = (divlinechart, ndata, flgarea, selarea) => {
+const makeLineChartDataArea = (ndata, selarea) => {
   const series = [];
-  if (flgarea) {
-    if (selarea) {
-      const prefs = JAPAN_AREA_CODE[selarea];
-      for (let i = 0; i < prefs.length; i++) {
-        const lgcode = prefs[i];
-        const name = JAPAN_PREF[lgcode - 1];
-        const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == lgcode).n);
-        series.push({ name, data });
-      }
-    } else {
-      for (const name in JAPAN_AREA_CODE) {
-        const lgcodes = JAPAN_AREA_CODE[name];
-        const data = months.map(i => {
-          const d2 = ndata.filter(j => j.month == i && lgcodes.indexOf(parseInt(j.lgcode)) >= 0);
-          const n = d2.reduce((pre, cur) => pre + parseInt(cur.n), 0);
-          return n;
-        });
-        series.push({ name, data });
-      }
+  if (selarea) {
+    const prefs = JAPAN_AREA_CODE[selarea];
+    for (let i = 0; i < prefs.length; i++) {
+      const lgcode = prefs[i];
+      const name = JAPAN_PREF[lgcode - 1];
+      const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == lgcode).n);
+      series.push({ name, data });
+    }
+  } else {
+    for (const name in JAPAN_AREA_CODE) {
+      const lgcodes = JAPAN_AREA_CODE[name];
+      const data = months.map(i => {
+        const d2 = ndata.filter(j => j.month == i && lgcodes.indexOf(parseInt(j.lgcode)) >= 0);
+        const n = d2.reduce((pre, cur) => pre + parseInt(cur.n), 0);
+        return n;
+      });
+      series.push({ name, data });
+    }
+  }
+  return series;
+};
+
+const makeLineChartDataPref = (ndata, name) => {
+  const series = [];
+  if (name) {
+    // pref
+    const prefcode = JAPAN_PREF.indexOf(name) + 1;
+    const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == prefcode).n);
+    series.push({ name, data });
+    // city
+    const pcities = cities.filter(i => i.pid == prefcode);
+    for (const city of pcities) {
+      const name = city.city;
+      const lgcode = city.cid;
+      const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == lgcode)?.n || 0);
+      series.push({ name, data });
     }
   } else {
     for (let i = 0; i < JAPAN_PREF.length; i++) {
@@ -171,14 +209,20 @@ const showLineChart = (divlinechart, ndata, flgarea, selarea) => {
       series.push({ name, data });
     }
   }
+  return series;
+};
+const showLineChart = (divlinechart, series, title, height = 350) => {
   const options = {
     series,
     chart: {
-      height: selarea ? 350 : 460,
-      type: 'line',
+      height,
+      type: "line",
       toolbar: {
         show: false
-      }
+      },
+      animations: {
+        enabled: false,
+      },
     },
     //colors: ['#77B6EA', '#545454'],
     /*
@@ -187,10 +231,11 @@ const showLineChart = (divlinechart, ndata, flgarea, selarea) => {
     },
     */
     stroke: {
-      curve: 'straight'
+      width: 3,
+      curve: "straight",
     },
     title: {
-      text: selarea || "",
+      text: title || "",
       align: "center",
     },
     /*
@@ -248,16 +293,33 @@ const show = () => {
   divtreemap.innerHTML = "";
   showTreemap(divtreemap, makeTreemapData(data, true));
   //showTreemap(divtreemap2, makeTreemapData(data, false));
+  divlinechart.innerHTML = "";
+  const pref = selpref.value;
+  if (pref == "全国") {
+    showLineChart(divlinechart, makeLineChartDataArea(data), "地域区分別", 650);
+  } else {
+    showLineChart(divlinechart, makeLineChartDataPref(data, pref), pref, 650);
+  }
+  const npref = JAPAN_PREF.indexOf(pref) + 1;
+  if (npref == 0) {
+    removeHash();
+  } else {
+    location.hash = "#" + npref;
+  }
 };
+const n = parseInt(location.hash.substring(1));
+if (n > 0) {
+  selpref.value = JAPAN_PREF[n - 1];
+}
 
-showLineChart(divlinechart, data, true);
 for (const name in JAPAN_AREA) {
   const div = document.createElement("div");
   divlinechart2.appendChild(div);
-  showLineChart(div, data, true, name);
+  showLineChart(div, makeLineChartDataArea(data, name), name);
 }
 
 show();
+selpref.oninput = () => show();
 selmonth.oninput = () => show();
 
 </script>
