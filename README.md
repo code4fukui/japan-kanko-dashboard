@@ -1,6 +1,6 @@
 # japan-kanko-dashboard
 
-[観光者数ダッシュボード](https:/code4fukui.github.io/japan-kanko-dashboard/)
+[観光者数ダッシュボード](https://code4fukui.github.io/japan-kanko-dashboard/)
 
 ## data
 
