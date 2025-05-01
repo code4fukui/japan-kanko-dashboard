@@ -185,7 +185,11 @@
 
       setOptions(selpref, ["全国", ...JAPAN_PREF]);
 
-      const months = ArrayUtil.toUnique(data.map((d) => d.month));
+      // 年月のおかしなデータを除去するため、年月は0より大きいものでフィルタリング
+      // 順序がおかしくなっていても表示できるようにソート
+      const months = ArrayUtil.toUnique(data.map((d) => d.month))
+        .filter((i) => i > 0)
+        .sort((a, b) => a - b);
       setOptions(
         selmonth,
         months,
