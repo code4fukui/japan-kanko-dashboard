@@ -1,357 +1,408 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
-<title>観光来訪者数ダッシュボード</title>
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="kankodashboard.jpg">
-<meta property="og:image" content="kankodashboard.jpg">
-</head><body>
-
-<header>
-<h1>観光来訪者数ダッシュボード</h1>
-</header>
-
-<main>
-<select id=selpref></select>
-<select id=selmonth></select>
-<div id=divtreemap></div>
-<div id=divtreemap2></div>
-<div id=divlinechart></div>
-<div id=divlinechart2></div>
-</main>
-
-<footer>
-DATA: <a href=https://www.nihon-kankou.or.jp/home/jigyou/research/d-toukei/>デジタル観光統計オープンデータ | 公益社団法人 日本観光振興協会</a> → <a href=https://github.com/code4fukui/japan-kanko-stat>観光来訪者数 都道府県市区町村別 on GitHub</a> → <a href=https://code4fukui.github.io/japan-kanko-stat/data/all.csv>all.csv</a><br>
-地域区分: <a href=https://www.stat.go.jp/data/shugyou/1997/3-1.html>統計局ホームページ/地域区分</a><br>
-<a href=https://github.com/code4fukui/japan-kanko-dashboard/>src on GitHub</a><br>
-</footer>
-
-<script type="module">
-import { CSV } from "https://js.sabae.cc/CSV.js";
-import ApexCharts from "https://code4fukui.github.io/apexcharts.js/ApexCharts.js";
-import { ArrayUtil } from "https://js.sabae.cc/ArrayUtil.js";
-import { Num } from "https://js.sabae.cc/Num.js";
-import { JAPAN_PREF, JAPAN_PREF_EN } from "https://js.sabae.cc/JAPAN_PREF.js";
-import { JAPAN_AREA, JAPAN_AREA_CODE } from "./JAPAN_AREA.js";
-import { removeHash } from "https://js.sabae.cc/removeHash.js";
-
-const urlc = "https://code4fukui.github.io/localgovjp/localgovjp-utf8.csv";
-const cities = await CSV.fetchJSON(urlc);
-cities.forEach(i => {
-  i.cid = parseInt(i.cid);
-  i.pid = parseInt(i.pid);
-});
-
-const url = "https://code4fukui.github.io/japan-kanko-stat/data/all.csv";
-const data = await CSV.fetchJSON(url);
-data.forEach(i => {
-  i.month = parseInt(i.month);
-  i.lgcode = parseInt(i.lgcode);
-  i.n = parseInt(i.n);
-});
-
-const showTreemap = (divtreemap, data, showtitle) => {
-  const options = {
-    series: [{ data }],
-    legend: {
-      show: false
-    },
-    chart: {
-      height: 650,
-      type: 'treemap'
-    },
-    dataLabels: {
-      enabled: true,
-      style: {
-        fontSize: '12px',
-      },
-      formatter: (text, op) => {
-        return [text, Num.fixbig(op.value, false) + "人"]
-      },
-      offsetY: -4
-    },
-    plotOptions: {
-      treemap: {
-        enableShades: true,
-        shadeIntensity: 0.5,
-        reverseNegativeShade: true,
-        colorScale: {
-          ranges: [
-            {
-              from: -1000000000,
-              to: 0,
-              color: '#CD363A'
-            },
-            {
-              from: 0.001,
-              to: 1000000000,
-              color: '#32219C'
-            }
-          ]
-        }
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="data:" />
+    <title>観光来訪者数ダッシュボード</title>
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="kankodashboard.jpg" />
+    <meta property="og:image" content="kankodashboard.jpg" />
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
       }
-    },
-    tooltip: {
-      /*
-      custom: ({series, seriesIndex, dataPointIndex, w}) => {
-        const d = w.config.series[seriesIndex].data[dataPointIndex];
-        return `${d.x}<br>${Num.fixbig(d.y, true)}円`
-      },
-      */
-      y: {
-        formatter: (v) => {
-          return Num.addComma(v) + "人";
-        },
+      header {
+        background-color: rgb(223, 214, 253);
+        color: #222;
+        font-size: 140%;
+        margin: 0;
+        padding: 1em 0;
       }
-    },
-  };
-  /*
-  if (colors) {
-    options.colors = colors;
-    options.plotOptions.treemap.distributed = true;
-    options.plotOptions.treemap.enableShades = false;
-    delete options.plotOptions.treemap.colorScale;
-  }
-  */
-  if (showtitle) {
-    options.title = {
-    };
-  }
-  const chart = new ApexCharts(divtreemap, options);
-  chart.render();
-};
+      select {
+        font-size: 130%;
+      }
+      h1 {
+        padding: 0;
+        margin: 0;
+      }
+      main,
+      footer {
+        margin: 0.5em;
+      }
+      footer {
+        padding: 1em 0;
+        margin: 0;
+        background-color: #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>観光来訪者数ダッシュボード</h1>
+    </header>
 
-const setOptions = (sel, array, functext) => {
-  for (const i of array) {
-    const opt = document.createElement("option");
-    opt.textContent = functext ? functext(i) : i;
-    opt.value = i;
-    sel.appendChild(opt);
-  }
-};
+    <main>
+      <select id="selpref"></select>
+      <select id="selmonth"></select>
+      <div id="divtreemap"></div>
+      <div id="divtreemap2"></div>
+      <div id="divlinechart"></div>
+      <div id="divlinechart2"></div>
+    </main>
 
-setOptions(selpref, ["全国", ...JAPAN_PREF]);
+    <footer>
+      DATA:
+      <a href="https://www.nihon-kankou.or.jp/home/jigyou/research/d-toukei/"
+        >デジタル観光統計オープンデータ | 公益社団法人 日本観光振興協会</a
+      >
+      →
+      <a href="https://github.com/code4fukui/japan-kanko-stat"
+        >観光来訪者数 都道府県市区町村別 on GitHub</a
+      >
+      →
+      <a href="https://code4fukui.github.io/japan-kanko-stat/data/all.csv"
+        >all.csv</a
+      ><br />
+      地域区分:
+      <a href="https://www.stat.go.jp/data/shugyou/1997/3-1.html"
+        >統計局ホームページ/地域区分</a
+      ><br />
+      <a href="https://github.com/code4fukui/japan-kanko-dashboard/"
+        >src on GitHub</a
+      ><br />
+    </footer>
 
-const months = ArrayUtil.toUnique(data.map(d => d.month));
-setOptions(selmonth, months, i => Math.floor(i / 100) + "年" + i % 100 + "月");
-selmonth.value = months[months.length - 1];
+    <script type="module">
+      import { CSV } from "https://js.sabae.cc/CSV.js";
+      import ApexCharts from "https://code4fukui.github.io/apexcharts.js/ApexCharts.js";
+      import { ArrayUtil } from "https://js.sabae.cc/ArrayUtil.js";
+      import { Num } from "https://js.sabae.cc/Num.js";
+      import {
+        JAPAN_PREF,
+        JAPAN_PREF_EN,
+      } from "https://js.sabae.cc/JAPAN_PREF.js";
+      import { JAPAN_AREA, JAPAN_AREA_CODE } from "./JAPAN_AREA.js";
+      import { removeHash } from "https://js.sabae.cc/removeHash.js";
 
-const makeTreemapData = (data, flgpref) => {
-  const p = selpref.value;
-  const pcode = JAPAN_PREF.indexOf(p) + 1;
-  if (pcode != 0) {
-    flgpref = false;
-  }
-  const m = selmonth.value;
-  const data2 = data.filter(i => {
-    if (i.month != m) return false;
-    if (pcode == 0) return true;
-    return Math.floor(i.lgcode / 1000) == pcode;
-  });
-
-  const res = [];
-  for (const d of data2) {
-    if (flgpref) {
-      if (d.lgcode > 100) continue;
-      res.push({ x: JAPAN_PREF[d.lgcode - 1], y: d.n });
-    } else {
-      if (d.lgcode < 100) continue;
-      res.push({ x: cities.find(i => i.cid == d.lgcode).city, y: d.n });
-    }
-  }
-  res.sort((a, b) => b.y - a.y);
-  return res;
-};
-
-// line chart
-const makeLineChartDataArea = (ndata, selarea) => {
-  const series = [];
-  if (selarea) {
-    const prefs = JAPAN_AREA_CODE[selarea];
-    for (let i = 0; i < prefs.length; i++) {
-      const lgcode = prefs[i];
-      const name = JAPAN_PREF[lgcode - 1];
-      const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == lgcode).n);
-      series.push({ name, data });
-    }
-  } else {
-    for (const name in JAPAN_AREA_CODE) {
-      const lgcodes = JAPAN_AREA_CODE[name];
-      const data = months.map(i => {
-        const d2 = ndata.filter(j => j.month == i && lgcodes.indexOf(parseInt(j.lgcode)) >= 0);
-        const n = d2.reduce((pre, cur) => pre + parseInt(cur.n), 0);
-        return n;
+      const urlc =
+        "https://code4fukui.github.io/localgovjp/localgovjp-utf8.csv";
+      const cities = await CSV.fetchJSON(urlc);
+      cities.forEach((i) => {
+        i.cid = parseInt(i.cid);
+        i.pid = parseInt(i.pid);
       });
-      series.push({ name, data });
-    }
-  }
-  return series;
-};
 
-const makeLineChartDataPref = (ndata, name) => {
-  const series = [];
-  if (name) {
-    // pref
-    const prefcode = JAPAN_PREF.indexOf(name) + 1;
-    const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == prefcode).n);
-    series.push({ name, data });
-    // city
-    const pcities = cities.filter(i => i.pid == prefcode);
-    for (const city of pcities) {
-      const name = city.city;
-      const lgcode = city.cid;
-      const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == lgcode)?.n || 0);
-      series.push({ name, data });
-    }
-  } else {
-    for (let i = 0; i < JAPAN_PREF.length; i++) {
-      const name = JAPAN_PREF[i];
-      const lgcode = i + 1;
-      const data = months.map(i => ndata.find(j => j.month == i && j.lgcode == lgcode).n);
-      series.push({ name, data });
-    }
-  }
-  return series;
-};
-const showLineChart = (divlinechart, series, title, height = 350) => {
-  const options = {
-    series,
-    chart: {
-      height,
-      type: "line",
-      toolbar: {
-        show: false
-      },
-      animations: {
-        enabled: false,
-      },
-    },
-    //colors: ['#77B6EA', '#545454'],
-    /*
-    dataLabels: {
-      enabled: true,
-    },
-    */
-    stroke: {
-      width: 3,
-      curve: "straight",
-    },
-    title: {
-      text: title || "",
-      align: "center",
-    },
-    /*
-    grid: {
-      borderColor: '#e7e7e7',
-      row: {
-        colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
-        opacity: 0.5
-      },
-    },
-    */
-    /*
-    markers: {
-      size: 1
-    },
-    */
-    xaxis: {
-      categories: months.map(i => Math.floor(i / 100) + "/" + i % 100),
-      /*
-      title: {
-        text: 'Month'
+      const url = "https://code4fukui.github.io/japan-kanko-stat/data/all.csv";
+      const data = await CSV.fetchJSON(url);
+      data.forEach((i) => {
+        i.month = parseInt(i.month);
+        i.lgcode = parseInt(i.lgcode);
+        i.n = parseInt(i.n);
+      });
+
+      const showTreemap = (divtreemap, data, showtitle) => {
+        const options = {
+          series: [{ data }],
+          legend: {
+            show: false,
+          },
+          chart: {
+            height: 650,
+            type: "treemap",
+          },
+          dataLabels: {
+            enabled: true,
+            style: {
+              fontSize: "12px",
+            },
+            formatter: (text, op) => {
+              return [text, Num.fixbig(op.value, false) + "人"];
+            },
+            offsetY: -4,
+          },
+          plotOptions: {
+            treemap: {
+              enableShades: true,
+              shadeIntensity: 0.5,
+              reverseNegativeShade: true,
+              colorScale: {
+                ranges: [
+                  {
+                    from: -1000000000,
+                    to: 0,
+                    color: "#CD363A",
+                  },
+                  {
+                    from: 0.001,
+                    to: 1000000000,
+                    color: "#32219C",
+                  },
+                ],
+              },
+            },
+          },
+          tooltip: {
+            /*
+            custom: ({series, seriesIndex, dataPointIndex, w}) => {
+              const d = w.config.series[seriesIndex].data[dataPointIndex];
+              return `${d.x}<br>${Num.fixbig(d.y, true)}円`
+            },
+            */
+            y: {
+              formatter: (v) => {
+                return Num.addComma(v) + "人";
+              },
+            },
+          },
+        };
+        /*
+        if (colors) {
+          options.colors = colors;
+          options.plotOptions.treemap.distributed = true;
+          options.plotOptions.treemap.enableShades = false;
+          delete options.plotOptions.treemap.colorScale;
+        }
+        */
+        if (showtitle) {
+          options.title = {};
+        }
+        const chart = new ApexCharts(divtreemap, options);
+        chart.render();
+      };
+
+      const setOptions = (sel, array, functext) => {
+        for (const i of array) {
+          const opt = document.createElement("option");
+          opt.textContent = functext ? functext(i) : i;
+          opt.value = i;
+          sel.appendChild(opt);
+        }
+      };
+
+      setOptions(selpref, ["全国", ...JAPAN_PREF]);
+
+      const months = ArrayUtil.toUnique(data.map((d) => d.month));
+      setOptions(
+        selmonth,
+        months,
+        (i) => Math.floor(i / 100) + "年" + (i % 100) + "月"
+      );
+      selmonth.value = months[months.length - 1];
+
+      const makeTreemapData = (data, flgpref) => {
+        const p = selpref.value;
+        const pcode = JAPAN_PREF.indexOf(p) + 1;
+        if (pcode != 0) {
+          flgpref = false;
+        }
+        const m = selmonth.value;
+        const data2 = data.filter((i) => {
+          if (i.month != m) return false;
+          if (pcode == 0) return true;
+          return Math.floor(i.lgcode / 1000) == pcode;
+        });
+
+        const res = [];
+        for (const d of data2) {
+          if (flgpref) {
+            if (d.lgcode > 100) continue;
+            res.push({ x: JAPAN_PREF[d.lgcode - 1], y: d.n });
+          } else {
+            if (d.lgcode < 100) continue;
+            res.push({ x: cities.find((i) => i.cid == d.lgcode).city, y: d.n });
+          }
+        }
+        res.sort((a, b) => b.y - a.y);
+        return res;
+      };
+
+      // line chart
+      const makeLineChartDataArea = (ndata, selarea) => {
+        const series = [];
+        if (selarea) {
+          const prefs = JAPAN_AREA_CODE[selarea];
+          for (let i = 0; i < prefs.length; i++) {
+            const lgcode = prefs[i];
+            const name = JAPAN_PREF[lgcode - 1];
+            const data = months.map(
+              (i) => ndata.find((j) => j.month == i && j.lgcode == lgcode).n
+            );
+            series.push({ name, data });
+          }
+        } else {
+          for (const name in JAPAN_AREA_CODE) {
+            const lgcodes = JAPAN_AREA_CODE[name];
+            const data = months.map((i) => {
+              const d2 = ndata.filter(
+                (j) => j.month == i && lgcodes.indexOf(parseInt(j.lgcode)) >= 0
+              );
+              const n = d2.reduce((pre, cur) => pre + parseInt(cur.n), 0);
+              return n;
+            });
+            series.push({ name, data });
+          }
+        }
+        return series;
+      };
+
+      const makeLineChartDataPref = (ndata, name) => {
+        const series = [];
+        if (name) {
+          // pref
+          const prefcode = JAPAN_PREF.indexOf(name) + 1;
+          const data = months.map(
+            (i) => ndata.find((j) => j.month == i && j.lgcode == prefcode).n
+          );
+          series.push({ name, data });
+          // city
+          const pcities = cities.filter((i) => i.pid == prefcode);
+          for (const city of pcities) {
+            const name = city.city;
+            const lgcode = city.cid;
+            const data = months.map(
+              (i) =>
+                ndata.find((j) => j.month == i && j.lgcode == lgcode)?.n || 0
+            );
+            series.push({ name, data });
+          }
+        } else {
+          for (let i = 0; i < JAPAN_PREF.length; i++) {
+            const name = JAPAN_PREF[i];
+            const lgcode = i + 1;
+            const data = months.map(
+              (i) => ndata.find((j) => j.month == i && j.lgcode == lgcode).n
+            );
+            series.push({ name, data });
+          }
+        }
+        return series;
+      };
+      const showLineChart = (divlinechart, series, title, height = 350) => {
+        const options = {
+          series,
+          chart: {
+            height,
+            type: "line",
+            toolbar: {
+              show: false,
+            },
+            animations: {
+              enabled: false,
+            },
+          },
+          //colors: ['#77B6EA', '#545454'],
+          /*
+          dataLabels: {
+            enabled: true,
+          },
+          */
+          stroke: {
+            width: 3,
+            curve: "straight",
+          },
+          title: {
+            text: title || "",
+            align: "center",
+          },
+          /*
+          grid: {
+            borderColor: '#e7e7e7',
+            row: {
+              colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
+              opacity: 0.5
+            },
+          },
+          */
+          /*
+          markers: {
+            size: 1
+          },
+          */
+          xaxis: {
+            categories: months.map(
+              (i) => Math.floor(i / 100) + "/" + (i % 100)
+            ),
+            /*
+            title: {
+              text: 'Month'
+            }
+            */
+          },
+          /*
+          yaxis: {
+            title: {
+              text: 'Temperature'
+            },
+            min: 5,
+            max: 40
+          },
+          */
+          legend: {
+            position: "top",
+            horizontalAlign: "center",
+            //floating: true,
+            //offsetY: -25,
+            //offsetX: -5
+          },
+          tooltip: {
+            y: {
+              formatter: (v) => {
+                return Num.addComma(v) + "人";
+              },
+            },
+          },
+        };
+
+        const chart = new ApexCharts(divlinechart, options);
+        chart.render();
+      };
+
+      const show = () => {
+        divtreemap.innerHTML = "";
+        showTreemap(divtreemap, makeTreemapData(data, true));
+        //showTreemap(divtreemap2, makeTreemapData(data, false));
+        divlinechart.innerHTML = "";
+        const pref = selpref.value;
+        if (pref == "全国") {
+          showLineChart(
+            divlinechart,
+            makeLineChartDataArea(data),
+            "地域区分別",
+            650
+          );
+        } else {
+          showLineChart(
+            divlinechart,
+            makeLineChartDataPref(data, pref),
+            pref,
+            650
+          );
+        }
+        const npref = JAPAN_PREF.indexOf(pref) + 1;
+        if (npref == 0) {
+          removeHash();
+        } else {
+          location.hash = "#" + npref;
+        }
+      };
+      const n = parseInt(location.hash.substring(1));
+      if (n > 0) {
+        selpref.value = JAPAN_PREF[n - 1];
       }
-      */
-    },
-    /*
-    yaxis: {
-      title: {
-        text: 'Temperature'
-      },
-      min: 5,
-      max: 40
-    },
-    */
-    legend: {
-      position: "top",
-      horizontalAlign: "center",
-      //floating: true,
-      //offsetY: -25,
-      //offsetX: -5
-    },
-    tooltip: {
-      y: {
-        formatter: (v) => {
-          return Num.addComma(v) + "人";
-        },
+
+      for (const name in JAPAN_AREA) {
+        const div = document.createElement("div");
+        divlinechart2.appendChild(div);
+        showLineChart(div, makeLineChartDataArea(data, name), name);
       }
-    },
-  };
 
-  const chart = new ApexCharts(divlinechart, options);
-  chart.render();
-};
-
-const show = () => {
-  divtreemap.innerHTML = "";
-  showTreemap(divtreemap, makeTreemapData(data, true));
-  //showTreemap(divtreemap2, makeTreemapData(data, false));
-  divlinechart.innerHTML = "";
-  const pref = selpref.value;
-  if (pref == "全国") {
-    showLineChart(divlinechart, makeLineChartDataArea(data), "地域区分別", 650);
-  } else {
-    showLineChart(divlinechart, makeLineChartDataPref(data, pref), pref, 650);
-  }
-  const npref = JAPAN_PREF.indexOf(pref) + 1;
-  if (npref == 0) {
-    removeHash();
-  } else {
-    location.hash = "#" + npref;
-  }
-};
-const n = parseInt(location.hash.substring(1));
-if (n > 0) {
-  selpref.value = JAPAN_PREF[n - 1];
-}
-
-for (const name in JAPAN_AREA) {
-  const div = document.createElement("div");
-  divlinechart2.appendChild(div);
-  showLineChart(div, makeLineChartDataArea(data, name), name);
-}
-
-show();
-selpref.oninput = () => show();
-selmonth.oninput = () => show();
-
-</script>
-
-<style>
-body {
-  font-family: sans-serif;
-  text-align: center;
-  margin: 0;
-  padding: 0;
-}
-header {
-  background-color: rgb(223, 214, 253);
-  color: #222;
-  font-size: 140%;
-  margin: 0;
-  padding: 1em 0;
-}
-select {
-  font-size: 130%;
-}
-h1 {
-  padding: 0;
-  margin: 0;
-}
-main, footer {
-  margin: .5em;
-}
-footer {
-  padding: 1em 0;
-  margin: 0;
-  background-color: #eee;
-}
-</style>
-</body></html>
+      show();
+      selpref.oninput = () => show();
+      selmonth.oninput = () => show();
+    </script>
+  </body>
+</html>
