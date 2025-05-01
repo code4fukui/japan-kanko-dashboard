@@ -229,7 +229,10 @@
             const lgcode = prefs[i];
             const name = JAPAN_PREF[lgcode - 1];
             const data = months.map(
-              (i) => ndata.find((j) => j.month == i && j.lgcode == lgcode).n
+              (i) => {
+                const found = ndata.find((j) => j.month == i && j.lgcode == lgcode)
+                return found ? found.n : 0;
+              }
             );
             series.push({ name, data });
           }
