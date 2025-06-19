@@ -61,11 +61,13 @@ const show = () => {
     return res;
   };
   const prevyear = thisyear - 1;
+  const prevyear2 = thisyear - 2;
+  data3[prevyear2] = cnv(data2.filter(i => i.month >= prevyear2 * 100 && i.month < prevyear * 100));
   data3[prevyear] = cnv(data2.filter(i => i.month >= prevyear * 100 && i.month < thisyear * 100));
   data3[thisyear] = cnv(data2.filter(i => i.month >= thisyear * 100));
 
   console.log(data3);
-  const colors = ["blue", "green", "orange", "red", "purple", "deepskyblue"];
+  const colors = ["deepskyblue", "blue", "green", "orange", "red", "purple",];
   const linechart = new LineChartSVG({
     width: 1000,
     height: 500,
