@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
+<title>観光来訪者数 前年比</title>
+</head><body>
+<h1>観光来訪者数 前年比</h1>
+<select id="selpref"></select>
+<div id="chart"></div>
+
+<style>
+body {
+  font-family: sans-serif;
+}
+#chart {
+  width: 95vw;
+}
+#selpref {
+  font-size: 130%;
+}
+a {
+  color: gray !important;
+}
+</style>
+
+<script type="module">
+import { JAPAN_PREF } from "https://js.sabae.cc/JAPAN_PREF.js";
+import { LineChartSVG } from "https://code4fukui.github.io/svg-chart/LineChartSVG.js";
+import { CSV } from "https://js.sabae.cc/CSV.js";
+
+let idx = 1;
+for (const pref of JAPAN_PREF) {
+  const opt = document.createElement("option");
+  opt.textContent = pref;
+  opt.value = idx++;
+  selpref.appendChild(opt);
+}
+selpref.value = location.hash.substring(1) || 18; // 福井県
+
+const url = "https://code4fukui.github.io/japan-kanko-stat/data/all.csv";
+//const url = "https://code4fukui.github.io/japan-kanko-stat/data/2025.csv";
+const data = await CSV.fetchJSON(url);
+data.forEach((i) => {
+  i.month = parseInt(i.month);
+  i.lgcode = parseInt(i.lgcode);
+  i.n = parseInt(i.n);
+});
+console.log(data);
+
+const show = () => {
+  chart.innerHTML = "";
+
+  const lgcode = selpref.value;
+  location.hash = "#" + lgcode;
+
+  const data2 = data.filter(i => i.lgcode == lgcode);
+  console.log(lgcode, data2)
+  const thisyear = new Date().getFullYear();
+  const data3 = {};
+  const cnv = (ar) => {
+    console.log("cnv", ar)
+    const res = {};
+    ar.forEach(i => res[i.month % 100 + "月"] = i.n);
+    return res;
+  };
+  const prevyear = thisyear - 1;
+  data3[prevyear] = cnv(data2.filter(i => i.month >= prevyear * 100 && i.month < thisyear * 100));
+  data3[thisyear] = cnv(data2.filter(i => i.month >= thisyear * 100));
+
+  console.log(data3);
+  const colors = ["blue", "green", "orange", "red", "purple", "deepskyblue"];
+  const linechart = new LineChartSVG({
+    width: 1000,
+    height: 500,
+    data: data3,
+    colors,
+  });
+  chart.appendChild(linechart);
+};
+show();
+selpref.oninput = () => show();
+
+</script>
+
+<hr>
+<footer>
+  Related App: <a href=./>ダッシュボード</a><br>
+  DATA:
+  <a href="https://www.nihon-kankou.or.jp/home/jigyou/research/d-toukei/"
+    >デジタル観光統計オープンデータ | 公益社団法人 日本観光振興協会</a
+  >
+  →
+  <a href="https://github.com/code4fukui/japan-kanko-stat"
+    >観光来訪者数 都道府県市区町村別 on GitHub</a
+  >
+  →
+  <a href="https://code4fukui.github.io/japan-kanko-stat/data/all.csv"
+    >all.csv</a
+  ><br />
+  地域区分:
+  <a href="https://www.stat.go.jp/data/shugyou/1997/3-1.html"
+    >統計局ホームページ/地域区分</a
+  ><br />
+  <a href="https://github.com/code4fukui/japan-kanko-dashboard/"
+    >src on GitHub</a
+  ><br />
+</footer>
+
+</body></html>
