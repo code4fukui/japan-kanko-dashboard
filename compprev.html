@@ -3,6 +3,7 @@
 </head><body>
 <h1>観光来訪者数 前年比</h1>
 <select id="selpref"></select>
+<select id="selcity"></select>
 <div id="chart"></div>
 
 <style>
@@ -12,7 +13,7 @@ body {
 #chart {
   width: 95vw;
 }
-#selpref {
+select {
   font-size: 130%;
 }
 a {
@@ -24,6 +25,15 @@ a {
 import { JAPAN_PREF } from "https://js.sabae.cc/JAPAN_PREF.js";
 import { LineChartSVG } from "https://code4fukui.github.io/svg-chart/LineChartSVG.js";
 import { CSV } from "https://js.sabae.cc/CSV.js";
+import { ArrayUtil } from "https://js.sabae.cc/ArrayUtil.js";
+
+const urlc = "https://code4fukui.github.io/localgovjp/localgovjp-utf8.csv";
+const cities = await CSV.fetchJSON(urlc);
+cities.forEach(i => {
+  i.cid = parseInt(i.cid);
+  i.pid = parseInt(i.pid);
+});
+//console.log("cities", cities);
 
 let idx = 1;
 for (const pref of JAPAN_PREF) {
@@ -32,7 +42,8 @@ for (const pref of JAPAN_PREF) {
   opt.value = idx++;
   selpref.appendChild(opt);
 }
-selpref.value = location.hash.substring(1) || 18; // 福井県
+const hash = parseInt(location.hash.substring(1) || "18"); // 福井県
+selpref.value = hash < 100 ? hash : (hash / 1000) >> 0;
 
 const url = "https://code4fukui.github.io/japan-kanko-stat/data/all.csv";
 //const url = "https://code4fukui.github.io/japan-kanko-stat/data/2025.csv";
@@ -42,20 +53,46 @@ data.forEach((i) => {
   i.lgcode = parseInt(i.lgcode);
   i.n = parseInt(i.n);
 });
-console.log(data);
+//console.log(data);
+
+const govlist = ArrayUtil.toUnique(data.map(i => i.lgcode));
+//console.log("govlist", govlist);
+
+const updateCity = () => {
+  const pref = parseInt(selpref.value)
+  const citylist = govlist.filter(i => ((i / 1000) >> 0) == pref);
+  selcity.innerHTML = "";
+  const opt = document.createElement("option");
+  opt.value = "";
+  opt.textContent = "-";
+  selcity.appendChild(opt);
+  for (const city of citylist) {
+    const opt = document.createElement("option");
+    opt.value = city;
+    opt.textContent = cities.find(i => i.cid == city).city;
+    selcity.appendChild(opt);
+  }
+};
+
+selpref.addEventListener("input", updateCity);
+updateCity();
+if (hash > 1000) {
+  selcity.value = hash;
+}
 
 const show = () => {
   chart.innerHTML = "";
 
-  const lgcode = selpref.value;
+  const lgcode = selcity.value ? selcity.value : selpref.value;
   location.hash = "#" + lgcode;
 
   const data2 = data.filter(i => i.lgcode == lgcode);
-  console.log(lgcode, data2)
+  //console.log(lgcode, data2)
   const thisyear = new Date().getFullYear();
   const data3 = {};
   const cnv = (ar) => {
-    console.log("cnv", ar)
+    //console.log("cnv", ar);
+    ar.sort((a, b) => a.month - b.month);
     const res = {};
     ar.forEach(i => res[i.month % 100 + "月"] = i.n);
     return res;
@@ -66,7 +103,7 @@ const show = () => {
   data3[prevyear] = cnv(data2.filter(i => i.month >= prevyear * 100 && i.month < thisyear * 100));
   data3[thisyear] = cnv(data2.filter(i => i.month >= thisyear * 100));
 
-  console.log(data3);
+  //console.log(data3);
   const colors = ["deepskyblue", "blue", "green", "orange", "red", "purple",];
   const linechart = new LineChartSVG({
     width: 1000,
@@ -77,7 +114,7 @@ const show = () => {
   chart.appendChild(linechart);
 };
 show();
-selpref.oninput = () => show();
+selpref.oninput = selcity.oninput = () => show();
 
 </script>
 
