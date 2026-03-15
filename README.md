@@ -1,5 +1,7 @@
 # japan-kanko-dashboard
 
+> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
+
 A dashboard for displaying the number of tourists visiting Japan by prefecture and city.
 
 ## Demo
