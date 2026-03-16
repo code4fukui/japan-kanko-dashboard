@@ -18,4 +18,4 @@ A dashboard for displaying the number of tourists visiting Japan by prefecture a
 - The data is available on [GitHub](https://github.com/code4fukui/japan-kanko-stat) and as a [CSV file](https://code4fukui.github.io/japan-kanko-stat/data/all.csv).
 
 ## License
-This project is licensed under the [MIT License](LICENSE).
+MIT License — see [LICENSE](LICENSE).
