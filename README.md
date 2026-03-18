@@ -1,6 +1,5 @@
 # japan-kanko-dashboard
-
-> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
+日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
 
 A dashboard for displaying the number of tourists visiting Japan by prefecture and city.
 
@@ -18,4 +17,4 @@ A dashboard for displaying the number of tourists visiting Japan by prefecture a
 - The data is available on [GitHub](https://github.com/code4fukui/japan-kanko-stat) and as a [CSV file](https://code4fukui.github.io/japan-kanko-stat/data/all.csv).
 
 ## License
-MIT License — see [LICENSE](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
